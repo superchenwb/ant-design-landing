@@ -1,12 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { polyfill } from 'react-lifecycles-compat';
-import { Icon, Button } from 'antd';
+import { Button } from 'antd';
+import { BarsOutlined, DeleteOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
 import { FormattedMessage } from 'react-intl';
 import dragula from 'dragula';
 
 import { getCurrentDom } from '../utils';
-import { isImg, mergeEditDataToDefault, getDataSourceValue, mdId, objectEqual, getChildRect } from '../../../utils';
+import { isImg, mergeEditDataToDefault, deepCopy, getDataSourceValue, mdId, objectEqual, getChildRect } from '../../../utils';
 import * as utils from '../../../theme/template/utils';
 import webData from '../template.config';
 import tempData from '../../../templates/template/element/template.config';
@@ -128,7 +129,7 @@ class EditStateController extends React.Component {
       .on('out', (el, source) => {
         if (source === this.stage) {
           if (el.className === 'placeholder') { // || el.className === 'overlay-elem'
-            this.setPropsData(el, Array.prototype.slice.call(source.children), true);
+            this.setPropsData(el, Array.prototype.slice.call(source.children));
           }
         }
       })
@@ -228,40 +229,29 @@ class EditStateController extends React.Component {
   }
 
   receiveDomData = (data, iframe, id) => {
-    const { templateData } = this.props;
-    const { template } = templateData ? templateData.data : { template: [] };
-    let isChange;
-    if (template.some((key) => key.indexOf('Nav2') >= 0)) {
-      isChange = this.addNavLinkData(templateData);
-    }
-    if (isChange) {
-      const { dispatch } = this.props;
-      dispatch(actions.setTemplateData(templateData));
-    } else {
-      Object.keys(id).forEach((key) => {
-        mdId[key] = id[key];
-      });
-      const state = {
-        data,
-        iframe,
-      };
-      const { parentData } = this.currentData || {};
-      if (parentData) {
-        const rectArray = getChildRect(parentData);
-        const isParentNode = this.currentData.dataId === parentData.dataId;
-        this.currentData = isParentNode ? this.currentData : this.refreshCurrentData(rectArray);
-        if (this.currentData) {
-          const currentSelectRect = this.currentData.item.getBoundingClientRect();
-          this.currentData.rect = currentSelectRect;
-          state.currentSelectRect = currentSelectRect;
-          state.currentHoverRect = currentSelectRect;
-          this.setState(state);
-        } else {
-          this.reRect();
-        }
-      } else {
+    Object.keys(id).forEach((key) => {
+      mdId[key] = id[key];
+    });
+    const state = {
+      data,
+      iframe,
+    };
+    const { parentData } = this.currentData || {};
+    if (parentData) {
+      const rectArray = getChildRect(parentData);
+      const isParentNode = this.currentData.dataId === parentData.dataId;
+      this.currentData = isParentNode ? this.currentData : this.refreshCurrentData(rectArray);
+      if (this.currentData) {
+        const currentSelectRect = this.currentData.item.getBoundingClientRect();
+        this.currentData.rect = currentSelectRect;
+        state.currentSelectRect = currentSelectRect;
+        state.currentHoverRect = currentSelectRect;
         this.setState(state);
+      } else {
+        this.reRect();
       }
+    } else {
+      this.setState(state);
     }
   }
 
@@ -281,7 +271,7 @@ class EditStateController extends React.Component {
   }
 
   setTemplateConfigData = (text) => {
-    const data = this.props.templateData;
+    const data = deepCopy(this.props.templateData);
     // data.noHistory = noHistory;
     const ids = this.currentData.dataId.split('-');
     const t = getDataSourceValue(ids[1], data.data.config, [ids[0], 'dataSource']);
@@ -435,7 +425,7 @@ class EditStateController extends React.Component {
     this.reEditItemVisibility();
   }
 
-  setPropsData = (el, children, add) => {
+  setPropsData = (el, children) => {
     const template = children.map((item) => item.getAttribute('id')).filter((id) => id);
     const { templateData } = this.props;
     if (el.className === 'placeholder') {
@@ -445,10 +435,6 @@ class EditStateController extends React.Component {
       ...templateData.data,
       template,
     };
-    // 添加 scrollLink 导航的时候，自动添加数据。
-    if (add) {
-      this.addNavLinkData(templateData);
-    }
     const { dispatch } = this.props;
     dispatch(actions.setTemplateData(templateData));
   };
@@ -531,7 +517,6 @@ class EditStateController extends React.Component {
           return item.cid !== key;
         });
         delete config[key];
-        this.removeNavLinkData(templateData, key);
         break;
     }
     if (this.state.openEditText) {
@@ -545,55 +530,18 @@ class EditStateController extends React.Component {
     }
   }
 
-  addNavLinkData = (templateData) => {
-    const { template } = templateData.data;
-    const nav2Array = template.filter((key) => key.indexOf('Nav2') >= 0);
-    const pageArray = template.filter((key) => !key.match(/Nav|Footer/ig));
-    const config = templateData.data.config;
-    let change = false;
-    nav2Array.forEach((key) => {
-      const menuLink = getDataSourceValue('LinkMenu', config, [key, 'dataSource']);
-      ([].concat(pageArray)).forEach((cKey) => {
-        const menuChild = menuLink.children || [];
-        if (menuChild.findIndex((item) => item.name === cKey) === -1) {
-          const index = pageArray.indexOf(cKey);
-          const obj = {
-            name: cKey,
-            to: cKey,
-            children: cKey,
-            className: 'menu-item',
-          };
-          menuChild.splice(index, 0, obj);
-          menuLink.children = menuChild;
-          change = true;
-        }
-      });
-    });
-    return change;
-  }
-
-  removeNavLinkData = (templateData, current) => {
-    const template = templateData.data.template;
-    const nav2Array = template.filter((key) => key.indexOf('Nav2') >= 0);
-    const config = templateData.data.config;
-    nav2Array.forEach((key) => {
-      const menuLink = getDataSourceValue('menuLink', config, [key, 'dataSource']);
-      const menuChild = menuLink.children || [];
-      const index = menuChild.findIndex((item) => item.name === current);
-      menuChild.splice(index, 1);
-      menuLink.children = menuChild;
-    });
-  }
-
   getFuncIconChild = (i, dataArray, key) => {
     return ['up', 'down', 'delete'].map((type) => {
       let disabled = false;
+      let child = <DeleteOutlined />;
       switch (type) {
         case 'up':
           disabled = !i;
+          child = <UpOutlined />;
           break;
         case 'down':
           disabled = i === dataArray.length - 1;
+          child = <DownOutlined />;
           break;
         default:
           disabled = dataArray.length === 1;
@@ -606,7 +554,7 @@ class EditStateController extends React.Component {
           key={type}
           onClick={(e) => { this.onFuncClick(type, key, e); }}
         >
-          <Icon type={type} />
+          {child}
         </Button>
       );
     });
@@ -658,7 +606,7 @@ class EditStateController extends React.Component {
           className="overlay-elem"
         >
           <div className="drag-hints">
-            <Icon type="bars" />
+            <BarsOutlined />
             {' '}
             <FormattedMessage id="app.state.drag" />
           </div>

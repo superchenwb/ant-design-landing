@@ -1,5 +1,9 @@
 import React from 'react';
-import { Pagination, Popover, Button, Icon } from 'antd';
+import { Pagination, Popover, Button } from 'antd';
+import {
+  BarsOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
 import { FormattedMessage } from 'react-intl';
 import { getRandomKey } from 'rc-editor-list/lib/utils';
 
@@ -11,7 +15,9 @@ import ListSort from './ListSort';
 
 export default class SwitchSlideView extends React.Component {
   componentDidUpdate() {
-    this.pop.tooltip.tooltip.trigger.forcePopupAlign();
+    if (this.pop.tooltip.tooltip.trigger && this.pop.tooltip.tooltip.trigger.forcePopupAlign) {
+      this.pop.tooltip.tooltip.trigger.forcePopupAlign();
+    }
   }
 
   getCurrentDataSource = (props) => {
@@ -100,7 +106,7 @@ export default class SwitchSlideView extends React.Component {
               }}
               size="small"
               shape="circle"
-              icon="delete"
+              icon={<DeleteOutlined />}
               disabled={child.length === 1}
             />
           </div>
@@ -114,7 +120,7 @@ export default class SwitchSlideView extends React.Component {
         key="list"
         dragElement={(
           <div className="sort-manage-icon">
-            <Icon type="bars" />
+            <BarsOutlined type="bars" />
           </div>
         )}
         onChange={(e) => {
@@ -160,7 +166,7 @@ export default class SwitchSlideView extends React.Component {
               this.pop = c;
             }}
           >
-            <Button type="primary" icon="bars" size="small" shape="circle" />
+            <Button type="primary" icon={<BarsOutlined />} size="small" shape="circle" />
           </Popover>
         </div>
       </div>

@@ -1,5 +1,8 @@
 import React from 'react';
-import { Tooltip, Icon } from 'antd';
+import { Tooltip } from 'antd';
+import {
+  RollbackOutlined,
+} from '@ant-design/icons';
 import { FormattedMessage } from 'react-intl';
 import classnames from 'classnames';
 import { connect } from 'react-redux';
@@ -20,9 +23,11 @@ class HistoryButton extends React.Component {
     if ((!currentHistory && num === -1) || (currentHistory >= history.length - 1 && num === 1)) {
       return;
     }
-    dispatch(actions.setCurrentHistoryNum(currentHistory));
     const currentData = history[currentHistory];
-
+    if (!currentData) {
+      return;
+    }
+    dispatch(actions.setCurrentHistoryNum(currentHistory));
     dispatch(actions.setTemplateData({
       data: currentData.attributes,
       uid: currentData.id,
@@ -68,12 +73,12 @@ class HistoryButton extends React.Component {
       <ul className="history-button-wrapper">
         <li className={undoClassName}>
           <Tooltip title={<FormattedMessage id="app.header.undo" />}>
-            <a onClick={(e) => { this.onHistoryClick(-1, e); }}><Icon type="rollback" /></a>
+            <a onClick={(e) => { this.onHistoryClick(-1, e); }}><RollbackOutlined /></a>
           </Tooltip>
         </li>
         <li className={redoClassName}>
           <Tooltip title={<FormattedMessage id="app.header.redo" />}>
-            <a onClick={(e) => { this.onHistoryClick(1, e); }}><Icon type="rollback" /></a>
+            <a onClick={(e) => { this.onHistoryClick(1, e); }}><RollbackOutlined /></a>
           </Tooltip>
         </li>
       </ul>
